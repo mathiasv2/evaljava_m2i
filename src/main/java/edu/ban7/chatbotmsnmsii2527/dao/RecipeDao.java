@@ -28,4 +28,17 @@ public interface RecipeDao extends JpaRepository<Recipe,Integer> {
     record RecipeCount (String name, long count){}
     */
 
+    @Query("SELECT DISTINCT r FROM Recipe r JOIN r.tags t WHERE t.id IN :tagIds")
+    List<Recipe> findByAnyTag(@Param("tagIds") List<Integer> tagIds);
+
+    @Query("""
+            SELECT r FROM Recipe r
+            JOIN r.tags t
+            WHERE t.id IN :tagIds
+            GROUP BY r
+            HAVING COUNT(DISTINCT t.id) = :tagCount
+            """)
+    List<Recipe> findByAllTags(@Param("tagIds") List<Integer> tagIds,
+                               @Param("tagCount") long tagCount);
+
 }
