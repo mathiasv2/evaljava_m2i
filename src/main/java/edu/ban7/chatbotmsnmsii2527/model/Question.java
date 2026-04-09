@@ -30,5 +30,5 @@ public class Question {
     protected AppUser author;
 
     @ManyToMany
-    protected List<Tag> tags = new ArrayList<>();
+    protected List<Product> tags = new ArrayList<>();
 }

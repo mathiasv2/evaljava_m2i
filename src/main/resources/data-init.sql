@@ -18,3 +18,15 @@ INSERT INTO recipe_tags (recipe_id, tags_id) VALUES
         (2, 1),
         (3, 2),
         (3, 3);
+
+INSERT INTO product (id, name) VALUES
+                                   (1, 'Fraise'),
+                                   (2, 'Chocolat'),
+                                   (3, 'Viande'),
+                                   (4, 'Pouelt');
+
+INSERT INTO question (content, author_id) VALUES
+                                              ('Une recette avec de la viande', 1),
+                                              ('Une recette avec du chocolat', 2),
+                                              ('Une recette avec des fruits', 1);
+
