@@ -1,0 +1,21 @@
+services:
+  app:
+    image: fbansept/chatbot-msii
+    ports:
+      - "8081:8080"
+  database:
+    image: postgres:18
+    environment:
+      # Note : les credentials de l'image deposé sur dockerhub
+      # dépendent des secrets du repo github (ex : postgres/postgres pour moi)
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: db
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+volumes:
+  postgres_data:
