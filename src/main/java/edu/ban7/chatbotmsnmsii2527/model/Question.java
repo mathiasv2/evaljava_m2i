@@ -29,8 +29,6 @@ public class Question {
     @ManyToOne
     protected AppUser author;
 
-
-
     @ManyToMany
     protected List<Tag> tags = new ArrayList<>();
 }
