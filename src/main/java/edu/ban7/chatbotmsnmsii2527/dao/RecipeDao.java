@@ -41,4 +41,11 @@ public interface RecipeDao extends JpaRepository<Recipe,Integer> {
     List<Recipe> findByAllTags(@Param("tagIds") List<Integer> tagIds,
                                @Param("tagCount") long tagCount);
 
+    @Query("""
+            SELECT r FROM Recipe r
+            WHERE r NOT IN (
+                SELECT r2 FROM Recipe r2 JOIN r2.tags t WHERE t.id IN :tagIds
+            )
+            """)
+    List<Recipe> findExcludingAnyTag(@Param("tagIds") List<Integer> tagIds);
 }
