@@ -6,6 +6,7 @@ import edu.ban7.chatbotmsnmsii2527.dto.Question;
 import edu.ban7.chatbotmsnmsii2527.model.AppUser;
 import edu.ban7.chatbotmsnmsii2527.model.Tag;
 import edu.ban7.chatbotmsnmsii2527.security.AppUserDetails;
+import edu.ban7.chatbotmsnmsii2527.security.IsAdmin;
 import edu.ban7.chatbotmsnmsii2527.security.IsUser;
 import edu.ban7.chatbotmsnmsii2527.service.AiService;
 import jakarta.validation.Valid;
@@ -49,6 +50,12 @@ public class ChatbotController {
                 .listeQuestionsByUser(userDetails.getUsername());
 
         return ResponseEntity.ok(questions);
+    }
+
+    @GetMapping("/get-all-questions")
+    @IsAdmin
+    public ResponseEntity<List<String>> getAllHistory() {
+        return new ResponseEntity<>(questionDao.toutesLesQuestion(), HttpStatus.OK);
     }
 
 

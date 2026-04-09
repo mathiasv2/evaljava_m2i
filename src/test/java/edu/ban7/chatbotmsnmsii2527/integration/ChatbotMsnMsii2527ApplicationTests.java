@@ -1,5 +1,6 @@
 package edu.ban7.chatbotmsnmsii2527.integration;
 
+import edu.ban7.chatbotmsnmsii2527.model.AppUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,8 @@ class ChatbotMsnMsii2527ApplicationTests {
     private WebApplicationContext context;
 
     private MockMvc mvc;
+    private AppUser user;
+    private AppUser admin;
 
     @BeforeEach
     void setup() {
@@ -57,4 +60,10 @@ class ChatbotMsnMsii2527ApplicationTests {
                 .andExpect(jsonPath("$.id").value(1));
     }
 
+    @Test
+    @WithUserDetails("user@test.com")
+    void getHistoryByUserId_asUserAccessingOtherHistory_shouldBeForbidden() throws Exception {
+        mvc.perform(get("/ai/history/" + admin.getId()))
+                .andExpect(status().isForbidden());
+    }
 }

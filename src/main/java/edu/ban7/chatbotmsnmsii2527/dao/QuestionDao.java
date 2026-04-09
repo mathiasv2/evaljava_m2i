@@ -20,6 +20,10 @@ public interface QuestionDao extends JpaRepository<AppUser,Integer> {
     @Query("SELECT u.content FROM Question u WHERE u.author = :author")
     List<String> listeQuestionsByUser(@Param("author") String author);
 
+    @Query("SELECT u.content FROM Question")
+    List<String> toutesLesQuestion();
+
+
 
 
 }
