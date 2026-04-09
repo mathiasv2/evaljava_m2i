@@ -26,6 +26,11 @@ public class Question {
     @NotBlank
     protected String content;
 
+    @ManyToOne
+    protected AppUser author;
+
+
+
     @ManyToMany
     protected List<Tag> tags = new ArrayList<>();
 }

@@ -15,4 +15,6 @@ public interface QuestionDao extends JpaRepository<AppUser,Integer> {
 
     @Query("SELECT u.pseudo FROM AppUser u WHERE u.admin = true")
     List<String> listeAdminPseudo();
+
+
 }
