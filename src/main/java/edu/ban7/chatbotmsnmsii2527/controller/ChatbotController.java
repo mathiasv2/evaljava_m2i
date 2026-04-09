@@ -49,7 +49,8 @@ public class ChatbotController {
         List<String> questions = questionDao
                 .listeQuestionsByUser(userDetails.getUsername());
 
-        return ResponseEntity.ok(questions);
+
+        return new ResponseEntity<>(questions, HttpStatus.OK);
     }
 
     @GetMapping("/get-all-questions")
