@@ -5,14 +5,15 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, List, Optional
 
-import requests
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def get_tracked_files() -> list[str]:
+def get_tracked_files() -> List[str]:
     """Retourne les fichiers qui seraient inclus dans un commit git."""
     try:
         result = subprocess.run(
@@ -25,7 +26,7 @@ def get_tracked_files() -> list[str]:
         sys.exit(1)
 
 
-def read_file_safe(path: str) -> str | None:
+def read_file_safe(path: str) -> Optional[str]:
     """Lit un fichier texte ; retourne None si binaire ou illisible."""
     try:
         return Path(path).read_text(encoding="utf-8", errors="replace")
@@ -41,7 +42,7 @@ def count_lines(content: str) -> int:
     return content.count("\n") + (1 if content and not content.endswith("\n") else 0)
 
 
-def diff_content(old: str, new: str) -> dict:
+def diff_content(old: str, new: str) -> Dict:
     """Calcule les lignes ajoutées / supprimées (diff simplifié)."""
     old_lines = set(old.splitlines())
     new_lines = set(new.splitlines())
@@ -54,22 +55,30 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def send(server: str, payload: dict, timeout: int = 10) -> bool:
+def send(server: str, payload: Dict, timeout: int = 10) -> bool:
+    """Envoie un payload JSON via urllib (pas de dépendance externe)."""
     try:
-        r = requests.post(f"{server}/event", json=payload, timeout=timeout)
-        return r.status_code == 200
-    except requests.RequestException as e:
-        print(f"[WARN] Envoi échoué : {e}", file=sys.stderr)
+        data = json.dumps(payload).encode("utf-8")
+        req  = urllib.request.Request(
+            "{}/event".format(server),
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status == 200
+    except (urllib.error.URLError, OSError) as e:
+        print("[WARN] Envoi échoué : {}".format(e), file=sys.stderr)
         return False
 
 
 # ── Snapshot initial ──────────────────────────────────────────────────────────
 
-def snapshot(server: str, student: str) -> dict[str, str]:
+def snapshot(server: str, student: str) -> Dict[str, str]:
     """Envoie tous les fichiers trackés ; retourne {path: hash}."""
     files = get_tracked_files()
-    state: dict[str, str] = {}
-    payload_files = {}
+    state: Dict[str, str] = {}
+    payload_files: Dict   = {}
 
     for f in files:
         content = read_file_safe(f)
@@ -78,62 +87,63 @@ def snapshot(server: str, student: str) -> dict[str, str]:
         state[f] = file_hash(content)
         payload_files[f] = {
             "content": content,
-            "lines": count_lines(content),
+            "lines":   count_lines(content),
         }
 
     payload = {
-        "type": "snapshot",
-        "student": student,
+        "type":      "snapshot",
+        "student":   student,
         "timestamp": now_iso(),
-        "cwd": os.getcwd(),
-        "files": payload_files,
+        "cwd":       os.getcwd(),
+        "files":     payload_files,
     }
 
-    ok = send(server, payload)
+    ok     = send(server, payload)
     status = "✓" if ok else "✗ (serveur injoignable)"
-    print(f"[{now_iso()}] Snapshot initial envoyé ({len(payload_files)} fichiers) {status}")
+    print("[{}] Snapshot initial envoyé ({} fichiers) {}".format(
+        now_iso(), len(payload_files), status))
     return state
 
 
 # ── Boucle de surveillance ────────────────────────────────────────────────────
 
-def watch(server: str, student: str, interval: int, state: dict[str, str]):
-    print(f"[INFO] Surveillance démarrée — intervalle {interval}s  (Ctrl+C pour arrêter)\n")
+def watch(server: str, student: str, interval: int, state: Dict[str, str]):
+    print("[INFO] Surveillance démarrée — intervalle {}s  (Ctrl+C pour arrêter)\n".format(interval))
     while True:
         time.sleep(interval)
-        files = get_tracked_files()
-        changed = {}
+        files   = get_tracked_files()
+        changed: Dict = {}
 
         for f in files:
             content = read_file_safe(f)
             if content is None:
                 continue
-            h = file_hash(content)
+            h        = file_hash(content)
             old_hash = state.get(f)
 
             if old_hash is None:
-                # Nouveau fichier
+                # Nouveau fichier apparu
                 changed[f] = {
-                    "status": "new",
+                    "status":  "new",
                     "content": content,
-                    "diff": {"added": count_lines(content), "removed": 0,
-                             "total_lines": count_lines(content)},
+                    "diff":    {"added": count_lines(content), "removed": 0,
+                                "total_lines": count_lines(content)},
                 }
             elif h != old_hash:
-                # Fichier modifié — on relit l'ancien contenu via git show
+                # Fichier modifié — récupère l'ancien contenu via git show
                 try:
-                    old_content_result = subprocess.run(
-                        ["git", "show", f"HEAD:{f}"],
+                    res = subprocess.run(
+                        ["git", "show", "HEAD:{}".format(f)],
                         capture_output=True, text=True
                     )
-                    old_content = old_content_result.stdout if old_content_result.returncode == 0 else ""
+                    old_content = res.stdout if res.returncode == 0 else ""
                 except Exception:
                     old_content = ""
 
                 changed[f] = {
-                    "status": "modified",
+                    "status":  "modified",
                     "content": content,
-                    "diff": diff_content(old_content, content),
+                    "diff":    diff_content(old_content, content),
                 }
 
             if f in changed:
@@ -150,34 +160,37 @@ def watch(server: str, student: str, interval: int, state: dict[str, str]):
             continue
 
         payload = {
-            "type": "diff",
-            "student": student,
-            "timestamp": now_iso(),
+            "type":             "diff",
+            "student":          student,
+            "timestamp":        now_iso(),
             "interval_seconds": interval,
-            "files": changed,
+            "files":            changed,
         }
 
-        ok = send(server, payload)
-        total_added   = sum(v["diff"].get("added", 0)   for v in changed.values())
+        ok            = send(server, payload)
+        total_added   = sum(v["diff"].get("added",   0) for v in changed.values())
         total_removed = sum(v["diff"].get("removed", 0) for v in changed.values())
-        status = "✓" if ok else "✗"
-        print(f"[{now_iso()}] Diff envoyé : {len(changed)} fichier(s)  "
-              f"+{total_added} / -{total_removed} lignes  {status}")
+        status        = "✓" if ok else "✗"
+        print("[{}] Diff envoyé : {} fichier(s)  +{} / -{} lignes  {}".format(
+            now_iso(), len(changed), total_added, total_removed, status))
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Agent de surveillance d'examen")
-    parser.add_argument("--server",   required=True, help="URL du serveur, ex: http://192.168.1.10:5000")
-    parser.add_argument("--student",  required=True, help="Nom de l'étudiant")
-    parser.add_argument("--interval", type=int, default=10, help="Intervalle entre diffs en secondes (défaut: 10)")
+    parser.add_argument("--server",   required=True,
+                        help="URL du serveur, ex: http://192.168.1.10:5000")
+    parser.add_argument("--student",  required=True,
+                        help="Nom de l'étudiant")
+    parser.add_argument("--interval", type=int, default=10,
+                        help="Intervalle entre diffs en secondes (défaut: 10)")
     args = parser.parse_args()
 
-    print(f"=== Moniteur d'examen ===")
-    print(f"Étudiant : {args.student}")
-    print(f"Serveur  : {args.server}")
-    print(f"Dossier  : {os.getcwd()}\n")
+    print("=== Moniteur d'examen ===")
+    print("Étudiant : {}".format(args.student))
+    print("Serveur  : {}".format(args.server))
+    print("Dossier  : {}\n".format(os.getcwd()))
 
     state = snapshot(args.server, args.student)
     try:

@@ -33,7 +33,42 @@ public class RecipeController {
         }
 
         return new ResponseEntity<>(optionalRecipe.get(), HttpStatus.OK);
+    }
 
+    @GetMapping("/filter/exclude-tags")
+    public ResponseEntity<List<Recipe>> getExcludingTags(
+            @RequestParam List<Integer> tagIds) {
+
+        if (tagIds.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<Recipe> recipes = recipeDao.findExcludingAnyTag(tagIds);
+        return ResponseEntity.ok(recipes);
+    }
+
+    @GetMapping("/filter/all-tags")
+    public ResponseEntity<List<Recipe>> getByAllTags(
+            @RequestParam List<Integer> tagIds) {
+
+        if (tagIds.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<Recipe> recipes = recipeDao.findByAllTags(tagIds, tagIds.size());
+        return ResponseEntity.ok(recipes);
+    }
+
+    @GetMapping("/filter/any-tag")
+    public ResponseEntity<List<Recipe>> getByAnyTag(
+            @RequestParam List<Integer> tagIds) {
+
+        if (tagIds.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<Recipe> recipes = recipeDao.findByAnyTag(tagIds);
+        return ResponseEntity.ok(recipes);
     }
 
     @PostMapping("/recipe")
