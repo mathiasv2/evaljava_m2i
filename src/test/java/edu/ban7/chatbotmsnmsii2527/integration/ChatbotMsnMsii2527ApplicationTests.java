@@ -1,5 +1,6 @@
 package edu.ban7.chatbotmsnmsii2527.integration;
 
+import edu.ban7.chatbotmsnmsii2527.dao.QuestionDao;
 import edu.ban7.chatbotmsnmsii2527.model.AppUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -61,9 +64,18 @@ class ChatbotMsnMsii2527ApplicationTests {
     }
 
     @Test
-    @WithUserDetails("user@test.com")
-    void getHistoryByUserId_asUserAccessingOtherHistory_shouldBeForbidden() throws Exception {
-        mvc.perform(get("/ai/history/" + admin.getId()))
+    @WithMockUser(roles = {"USER"})
+    void getAllQuestions_asUser_shouldBeForbidden() throws Exception {
+
+        mvc.perform(get("/get-all-questions"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = {"ADMIN"})
+    void getMyQuestions_asAdmin_shouldBeForbidden() throws Exception {
+
+        mvc.perform(get("/get-my-questions"))
                 .andExpect(status().isForbidden());
     }
 }
