@@ -3,6 +3,8 @@ package edu.ban7.chatbotmsnmsii2527.service;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import edu.ban7.chatbotmsnmsii2527.dao.RecipeDao;
+import edu.ban7.chatbotmsnmsii2527.model.AppUser;
+import edu.ban7.chatbotmsnmsii2527.model.Question;
 import edu.ban7.chatbotmsnmsii2527.model.Recipe;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -18,7 +20,11 @@ public class AiService {
     protected final Client client;
     protected final RecipeDao recipeDao;
 
-    public String askGemini(String prompt) {
+    public String askGemini(String prompt, AppUser author) {
+
+        Question question = new Question();
+        question.setContent(prompt);
+        question.setAuthor(author);
 
         List<Recipe> recipes = recipeDao.findAll();
         String formattedRecipes = recipes.stream()

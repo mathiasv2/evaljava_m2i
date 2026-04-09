@@ -2,6 +2,7 @@ package edu.ban7.chatbotmsnmsii2527.controller;
 
 import edu.ban7.chatbotmsnmsii2527.dao.TagDao;
 import edu.ban7.chatbotmsnmsii2527.dto.Question;
+import edu.ban7.chatbotmsnmsii2527.model.AppUser;
 import edu.ban7.chatbotmsnmsii2527.model.Tag;
 import edu.ban7.chatbotmsnmsii2527.security.AppUserDetails;
 import edu.ban7.chatbotmsnmsii2527.security.IsUser;
@@ -31,7 +32,7 @@ public class ChatbotController {
         System.out.println(userDetails.getUser().getPseudo());
 
         return new ResponseEntity<>(
-                aiService.askGemini(question.content()),
+                aiService.askGemini(question.content(), userDetails.getUser()),
                 HttpStatus.OK);
     }
 
